@@ -442,7 +442,7 @@ Event checks: All deployment events completed successfully.
 ![Testing & verification](https://i.postimg.cc/V6YwTfFF/Screenshot-2025-10-24-231945.png)
 
 Frontend works: Open the public URL and confirm the UI displays backend data.
-![Testing & verification](https://i.postimg.cc/XYCQM9HZ/Screenshot-2025-10-24-231347.png)
+![Testing & verification](https://i.postimg.cc/rwMCH7rf/Screenshot-2025-10-24-231347.png)
 
 ---
 
