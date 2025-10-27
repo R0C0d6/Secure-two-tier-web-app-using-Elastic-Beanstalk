@@ -1,4 +1,4 @@
-# Week 2 of my 12-Week AWS Hands-On Challenge (shoutout to Paula Wakabi)
+# Week 2 of my 12-Week AWS Hands-On Challenge
 
 A secure, production-style Multi-Tier App using Elastic Beanstalk and learned a ton. This is the full story, technical walkthrough, and lessons.
 
@@ -80,7 +80,7 @@ Create Application file(application.py), Requirements file(requirements.txt) and
  Example: web: gunicorn application:application
  This runs your app in production mode using Gunicorn.
 
-https://i.postimg.cc/GtTt0zCb/Screenshot-2025-10-23-152753.png
+![Initial configuration and Setup](https://i.postimg.cc/GtTt0zCb/Screenshot-2025-10-23-152753.png)
 
 
 ### Backend: `week2-backend/application.py`
@@ -189,7 +189,7 @@ requests==2.32.3
 web: gunicorn application:application
 
 ### ZIP the folders
-https://i.postimg.cc/vZjLR2fw/Screenshot-2025-10-23-152823.png
+![Zip folders](https://i.postimg.cc/vZjLR2fw/Screenshot-2025-10-23-152823.png)
 
 
 > Important: Name the file `application.py` and ensure the WSGI callable is named `application`. Elastic Beanstalk looks for that by default. 
@@ -202,18 +202,19 @@ Create a VPC with 2 public and 2 private subnets in two AZs, attach an IGW, crea
 
 
 1. Create VPC: `10.0.0.0/16`, name it e.g.`week2-secure-vpc`.
-   https://i.postimg.cc/15FNnRqt/Screenshot-2025-10-23-160733.png
+   ![VPC created](https://i.postimg.cc/15FNnRqt/Screenshot-2025-10-23-160733.png)
    
 3. Create Public Subnet 1: `10.0.1.0/24` (AZ A), Public Subnet 2 — `10.0.2.0/24` (AZ B).
-   https://i.postimg.cc/KjfB9xnL/Screenshot-2025-10-23-161425.png
-   https://i.postimg.cc/PJVNpxW4/Screenshot-2025-10-23-161559.png
-   https://i.postimg.cc/Wzz1vvBJ/Screenshot-2025-10-23-161622.png
-   https://i.postimg.cc/KzvZPbvw/Screenshot-2025-10-23-155554.png
-5. Create Private Subnet 1: `10.0.11.0/24` (AZ A), Private Subnet 2 — `10.0.12.0/24` (AZ B).
-6. Create Internet Gateway (IGW) and attach to VPC.
-7. Create a Public Route Table, add route `0.0.0.0/0` -> IGW, associate with public subnets.
-8. Allocate an Elastic IP and create a NAT Gateway in a public subnet (for private instances to download packages).
-9. Create a Private Route Table, add route `0.0.0.0/0` -> NAT Gateway, associate with private subnets.
+   ![Public Subnet](https://i.postimg.cc/KjfB9xnL/Screenshot-2025-10-23-161425.png)
+   ![Public Subnet](https://i.postimg.cc/PJVNpxW4/Screenshot-2025-10-23-161559.png)
+   ![Public Subnet](https://i.postimg.cc/Wzz1vvBJ/Screenshot-2025-10-23-161622.png)
+   
+4. Create Private Subnet 1: `10.0.11.0/24` (AZ A), Private Subnet 2 — `10.0.12.0/24` (AZ B).
+   ![VPC created](https://i.postimg.cc/KzvZPbvw/Screenshot-2025-10-23-155554.png)
+5. Create Internet Gateway (IGW) and attach to VPC.
+6. Create a Public Route Table, add route `0.0.0.0/0` -> IGW, associate with public subnets.
+7. Allocate an Elastic IP and create a NAT Gateway in a public subnet (for private instances to download packages).
+8. Create a Private Route Table, add route `0.0.0.0/0` -> NAT Gateway, associate with private subnets.
 
 Confirm: public subnets send internet to IGW; private subnets send internet to NAT.
 
