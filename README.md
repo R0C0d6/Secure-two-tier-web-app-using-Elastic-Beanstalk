@@ -19,7 +19,7 @@ I wanted to go beyond “launch a single EC2 and call it a day.” In modern clo
  Manageability ( BeanstalkUI, scaling)
  Repeatability (infrastructure as small, scriptable steps)
 
-Elastic Beanstalk is great for beginners and for quick prototyping, but you can, and should, configure it properly to follow secure best practices: Frontend in public subnets, private instances behind it, NAT for outbound package downloads, and tightly scoped security groups that only allow the traffic you actually need.
+Elastic Beanstalk is great for quick prototyping, but you can, and should, configure it properly to follow secure best practices: Frontend in public subnets, private instances behind it, NAT for outbound package downloads, and tightly scoped security groups that only allow the traffic you actually need.
 
 ---
 
@@ -63,74 +63,136 @@ Key security points:
 
 ---
 
-## Code 
+## Initial Configuration
+Configure your AWS Environment and..... 
 
 Make two folders: e.g. `week2-backend/` and `week2-frontend/`.
+
+Create Application file(application.py), Requirements file(requirements.txt) and Procfile(procfile).
+ application.py → your main web app file.
+ Defines the Flask app logic.
+ Must contain a variable called application (e.g., application = Flask(__name__)) because Elastic Beanstalk looks for it to start your app.
+
+ requirements.txt → lists all the Python packages your app needs (like Flask, requests, etc.).
+ Elastic Beanstalk installs everything in this file automatically when deploying.
+
+ Procfile → tells Elastic Beanstalk how to run your app.
+ Example: web: gunicorn application:application
+ This runs your app in production mode using Gunicorn.
+
+https://i.postimg.cc/GtTt0zCb/Screenshot-2025-10-23-152753.png
+
 
 ### Backend: `week2-backend/application.py`
 
 ```python
 from flask import Flask, jsonify
 
-# Elastic Beanstalk expects the WSGI callable to be named `application`
 application = Flask(__name__)
 
 @application.route('/')
 def home():
-    return jsonify({"message": "Hello from Backend (private)!"})
+    return jsonify({"message": "Hello from the Backend API!"})
 
 @application.route('/data')
 def data():
     return jsonify({
-        "users": ["Roland", "Habiba"],
-        "message": "Backend (private) responds"
+        "users": ["12WKChallenge", "Roland", "Paula Wakabi"],
+        "message": "Backend is running as it should, Paula"
     })
+
+if __name__ == '__main__':
+    application.run(host='0.0.0.0', port=8080)  # IMPORTANT: EB listens on port 8080
 ```
 
-`week2-backend/requirements.txt`
+### Backend: `week2-backend/requirements.txt` (Requirements.txt)
+```
+Flask==3.0.0
+ flask-cors==4.0.0
+ gunicorn==21.2.0
+```
 
-```
-Flask==2.2.5
-```
+### Backend: `week2-backend/procfile` (Procfile)
+web: gunicorn application:application
+
+
+...
+
 
 ### Frontend: `week2-frontend/application.py`
 
 ```python
 from flask import Flask, render_template
-import os, requests
+import requests
 
 application = Flask(__name__)
 
-# This env var will be set in the frontend EB environment
-BACKEND_URL = os.environ.get("BACKEND_URL", "http://127.0.0.1:5000/data")
+# Backend API URL (your Beanstalk backend)
+BACKEND_URL = "http://roawschallenge.us-east-1.elasticbeanstalk.com/"
 
 @application.route('/')
 def home():
     try:
-        r = requests.get(BACKEND_URL, timeout=4)
-        data = r.json()
-        users = data.get('users', [])
-        message = data.get('message', '')
+        response = requests.get(BACKEND_URL)
+        data = response.json()
     except Exception as e:
-        users = []
-        message = f"Error contacting backend: {e}"
+        data = {"error": str(e), "message": "Eka aa aba no. We failed to fetch backend data o"}
 
-    return render_template('index.html', users=users, message=message)
+    return render_template('index.html', data=data)
+
+if __name__ == '__main__':
+    application.run(host='0.0.0.0', port=8080)
 ```
 
-`week2-frontend/requirements.txt`
+### Frontend: `week2-frontend/requirements.txt` (Requirements.txt)
 
 ```
-Flask==2.2.5
-requests==2.31.0
+Flask==3.0.2
+gunicorn==21.2.0
+requests==2.32.3
 ```
 
-`week2-frontend/templates/index.html`
+### Frontend: `week2-frontend/templates/index.html` (index.html)
+```
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AWS Challenge Frontend</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin-top: 50px;
+    }
+    .card {
+      display: inline-block;
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 { color: #0073bb; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Frontend Connected Successfully ooooo, wonim effort</h1>
+    <p><b>Message from Backend:</b> {{ data.message }}</p>
+    <p><b>Users:</b> {{ data.users }}</p>
+  </div>
+</body>
+</html>
+```
+
+### Frontend: `week2-frontend/procfile` (procfile)
+web: gunicorn application:application
+
+### ZIP the folders
+https://i.postimg.cc/vZjLR2fw/Screenshot-2025-10-23-152823.png
 
 
-
-
-> Important: Name the file `application.py` and ensure the WSGI callable is named `application`. Elastic Beanstalk looks for that by default. Also put `requirements.txt` at the top level of the zip.
+> Important: Name the file `application.py` and ensure the WSGI callable is named `application`. Elastic Beanstalk looks for that by default. 
 
 ---
 
@@ -139,13 +201,19 @@ requests==2.31.0
 Create a VPC with 2 public and 2 private subnets in two AZs, attach an IGW, create a NAT Gateway, and route tables.
 
 
-1. Create VPC: `10.0.0.0/16`, name `week2-secure-vpc`.
-2. Create Public Subnet 1: `10.0.1.0/24` (AZ A), Public Subnet 2 — `10.0.2.0/24` (AZ B).
-3. Create Private Subnet 1: `10.0.11.0/24` (AZ A), Private Subnet 2 — `10.0.12.0/24` (AZ B).
-4. Create Internet Gateway (IGW) and attach to VPC.
-5. Create a Public Route Table, add route `0.0.0.0/0` -> IGW, associate with public subnets.
-6. Allocate an Elastic IP and create a NAT Gateway in a public subnet (for private instances to download packages).
-7. Create a Private Route Table, add route `0.0.0.0/0` -> NAT Gateway, associate with private subnets.
+1. Create VPC: `10.0.0.0/16`, name it e.g.`week2-secure-vpc`.
+   https://i.postimg.cc/15FNnRqt/Screenshot-2025-10-23-160733.png
+   
+3. Create Public Subnet 1: `10.0.1.0/24` (AZ A), Public Subnet 2 — `10.0.2.0/24` (AZ B).
+   https://i.postimg.cc/KjfB9xnL/Screenshot-2025-10-23-161425.png
+   https://i.postimg.cc/PJVNpxW4/Screenshot-2025-10-23-161559.png
+   https://i.postimg.cc/Wzz1vvBJ/Screenshot-2025-10-23-161622.png
+   https://i.postimg.cc/KzvZPbvw/Screenshot-2025-10-23-155554.png
+5. Create Private Subnet 1: `10.0.11.0/24` (AZ A), Private Subnet 2 — `10.0.12.0/24` (AZ B).
+6. Create Internet Gateway (IGW) and attach to VPC.
+7. Create a Public Route Table, add route `0.0.0.0/0` -> IGW, associate with public subnets.
+8. Allocate an Elastic IP and create a NAT Gateway in a public subnet (for private instances to download packages).
+9. Create a Private Route Table, add route `0.0.0.0/0` -> NAT Gateway, associate with private subnets.
 
 Confirm: public subnets send internet to IGW; private subnets send internet to NAT.
 
