@@ -214,12 +214,18 @@ Create a VPC with 2 public and 2 private subnets in two AZs, attach an IGW, crea
 5. Create Internet Gateway (IGW) and attach to VPC.
    ![IGW Created](https://i.postimg.cc/2yxcYpfx/Screenshot-2025-10-23-162649.png)
    ![IGW Attached](https://i.postimg.cc/x1PzP03b/Screenshot-2025-10-23-162732.png)
-7. Create a Role and instance profile.
-   ![Role Created](https://i.postimg.cc/KzvZPbvw/Screenshot-2025-10-23-155554.png)
-8. Create a Public Route Table, add route `0.0.0.0/0` -> IGW, associate with public subnets.
-9. Allocate an Elastic IP and create a NAT Gateway in a public subnet (for private instances to download packages).
+   
+6. Create a Public Route Table, add route `0.0.0.0/0` -> IGW, associate with public subnets.
+   ![PubRT](https://i.postimg.cc/hvgJm6Qh/Screenshot-2025-10-23-163111.png)
+   ![PubRT](https://i.postimg.cc/x1kdXnFS/Screenshot-2025-10-23-163418.png)
+   ![PubRT](https://i.postimg.cc/CxfFFJzZ/Screenshot-2025-10-23-163534.png)
+   ![PubRT](https://i.postimg.cc/658K0zVd/Screenshot-2025-10-23-163548.png)
+8. Allocate an Elastic IP and create a NAT Gateway in a public subnet (for private instances to download packages).
+   ![NGW](https://i.postimg.cc/sgwDH1QQ/Screenshot-2025-10-23-164328.png)
 10. Create a Private Route Table, add route `0.0.0.0/0` -> NAT Gateway, associate with private subnets.
-
+![PrivRT](https://i.postimg.cc/kGrHvF7Z/Screenshot-2025-10-23-163701.png)
+![PrivRT](https://i.postimg.cc/q7zZfZRh/Screenshot-2025-10-23-163722.png)
+![PrivRT](https://i.postimg.cc/MGMt3MPm/Screenshot-2025-10-23-164514.png)
 Confirm: public subnets send internet to IGW; private subnets send internet to NAT.
 
 ---
@@ -228,13 +234,14 @@ Confirm: public subnets send internet to IGW; private subnets send internet to N
 
 Elastic Beanstalk needs:
 
-Service role (Elastic Beanstalk to perform management tasks). Attach `AWSElasticBeanstalkServiceRolePolicy`.
-EC2 instance profile (role for the EC2 instances EB launches). Attach `AWSElasticBeanstalkWebTier` (and relevant policies like S3 access if needed), and ensure the instance profile ARN exists.
+Service role (Elastic Beanstalk to perform management tasks). 
+![SVCRole](https://i.postimg.cc/cH6hjDx0/Screenshot-2025-10-23-154332.png)
+![SVCRole](https://i.postimg.cc/HnXwDRfk/Screenshot-2025-10-23-154359.png)
+
+EC2 instance profile (role for the EC2 instances EB launches). 
+![SVCRole](https://i.postimg.cc/KzvZPbvw/Screenshot-2025-10-23-155554.png)
 
 Create them in IAM → Roles → Create role → choose AWS service (Elastic Beanstalk / EC2) and attach the policies. Name them:
-
- `aws-elasticbeanstalk-service-role`
- `aws-elasticbeanstalk-ec2-role`
 
 ---
 
