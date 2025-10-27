@@ -188,8 +188,9 @@ requests==2.32.3
 ### Frontend: `week2-frontend/procfile` (procfile)
 web: gunicorn application:application
 
-### ZIP the folders
-![Zip folders](https://i.postimg.cc/vZjLR2fw/Screenshot-2025-10-23-152823.png)
+### Test the code locally (I tested on port 5000. Port 80 was in use on my local machine)
+![Test Code locally](https://i.postimg.cc/gJwHzNx7/Screenshot-2025-10-24-184258.png)
+![Test Code locally](https://i.postimg.cc/R0hcdXLC/Screenshot-2025-10-24-184321.png)
 
 
 > Important: Name the file `application.py` and ensure the WSGI callable is named `application`. Elastic Beanstalk looks for that by default. 
@@ -241,44 +242,34 @@ Service role (Elastic Beanstalk to perform management tasks).
 EC2 instance profile (role for the EC2 instances EB launches). 
 ![SVCRole](https://i.postimg.cc/KzvZPbvw/Screenshot-2025-10-23-155554.png)
 
-Create them in IAM → Roles → Create role → choose AWS service (Elastic Beanstalk / EC2) and attach the policies. Name them:
+Create them in IAM → Roles → Create role → choose AWS service (Elastic Beanstalk / EC2) and attach the policies.
 
 ---
 
 ## Security Groups
 
-Create four SGs in the VPC:
+Create two SGs in the VPC:
 
-sg-frontend-alb (internet ALB)
+Name them as you prefer: e.g. sg-frontend-ec2 (frontend instances)
 
-Inbound: HTTP 80 from `0.0.0.0/0`
-Outbound: All
-
-sg-frontend-ec2 (frontend instances)
-
-   Inbound: HTTP 80 from `sg-frontend-alb`
+   Inbound: HTTP 80 
    Inbound (optional): SSH 22 from your IP
-   Outbound: Allow HTTP to `sg-backend-alb` (or all outbound)
+   Outbound: Allow HTTP to backend (or all outbound)
+   ![PublicSG](https://i.postimg.cc/85YMxNcg/Screenshot-2025-10-23-165359.png)
 
-sg-backend-alb (internal ALB)
+Name them as you prefer: e.g. sg-backend-ec2 (backend instances)
 
-   Inbound: HTTP 80 from `sg-frontend-ec2`
-   Outbound: All
-
-sg-backend-ec2 (backend instances)
-
-   Inbound: HTTP 80 from `sg-backend-alb`
+   Inbound: HTTP 80 from frontend
    Inbound (optional): SSH 22 from your IP (for debugging)
    Outbound: All
-
-Note: Use security group references (SG → SG) — this ensures only the components you expect can talk to one another.
+![PrivateSG](https://i.postimg.cc/Twx3wssh/Screenshot-2025-10-23-165830.png)
 
 ---
 
 
-## Packaging for Elastic Beanstalk (gotchas)
+## Packaging for Elastic Beanstalk (zip the backend)
 
-Important: When you create the zip file to upload to Elastic Beanstalk, zip the *contents* of the app folder, not the folder itself.
+Important: When you create the zip file to upload to Elastic Beanstalk, zip the contents of the app folder, not the folder itself. This is one of the issues i faced initially😅
 
 Correct:
 
@@ -298,90 +289,193 @@ Make sure `application.py` and `requirements.txt` are at the top level inside th
 
 ---
 
-## Deploy the Backend (internal EB environment)
+## Deploy the Backend (internal Elastic Beanstalk environment)
 
 In Elastic Beanstalk console:
 
-1. Create Application → Upload `backend.zip`.
+1. Create Application → Upload your `backend.zip` file.
 2. Configure (more options) → Network:
+    VPC: Select your VPC
+    Instance subnet: priv-subnet-1.
+3. Security groups: assign your private SG e.g.`sg-backend` for instances
+4. Use Basic monitoring.
+5. Managed Updates were turned off. Rolling updates were disabled. Not required due to the type of application
+6. Deployment Policy: All at once. Batch Size type: Percentage
+7. IAM roles: `aws-elasticbeanstalk-service-role` + `aws-elasticbeanstalk-ec2-role`
+8. Create environment → Wait for Green.
 
-    VPC: `week2-secure-vpc`
-    Load balancer subnets: priv-subnet-1, priv-subnet-2
-    Instance subnets: priv-subnet-1, priv-subnet-2
-    Load balancer = Application Load Balancer, Scheme = internal
-3. Security groups: assign `sg-backend-alb` for ALB and `sg-backend-ec2` for instances
-4. IAM roles: `aws-elasticbeanstalk-service-role` + `aws-elasticbeanstalk-ec2-role`
-5. Create environment → Wait for Green.
+   ### STEP 1
+   Select Web Server Environment. Give it a Name.
+![Backend Beanstalk Setup](https://i.postimg.cc/N07GScsZ/Screenshot-2025-10-23-153311.png)
 
-You will get an internal ALB DNS (e.g., `internal-backend-xxxx.elb.amazonaws.com`). Note it down — this is the backend URL used by the frontend inside the VPC.
+Platform: Select Python. 
+PLatform Branch: Python 3.9 or equivalent
+![Backend Beanstalk Setup](https://i.postimg.cc/Hs2fqkX4/Screenshot-2025-10-23-153322.png)
+
+Application Code: Select Upload your code. Upload your zipped file. 
+Version Label. Provide a version identifier.
+Single Instance: Free tier Deployment to avoid unintended cost , or interruptions in the case of spot.
+![Backend Beanstalk Setup](https://i.postimg.cc/kGypPT6K/Screenshot-2025-10-23-153331.png)
+
+### STEP 2
+Next, Configure Service Access by Selecting the Service Role and the EC instance Profile created earlier
+Provide a Key Pair. Create one if you don't have any (Choose RSA and .pem when creating it)
+![Backend Beanstalk Setup](https://i.postimg.cc/brL3BdWN/Screenshot-2025-10-23-155653.png)
+
+
+### STEP 3
+Select the VPC you Created and the Private Subnet.
+Leave the assign public IP unchecked because we are deploying our backend in Private subnets
+![Backend Beanstalk Setup](https://i.postimg.cc/Kjc5Bxjb/Screenshot-2025-10-23-171302.png)
+
+
+### STEP 4 
+Choose the Instance Type: General Purpose
+Monitoring Interval: Leave as default
+![Backend Beanstalk Setup](https://i.postimg.cc/28M4844J/Screenshot-2025-10-23-172252.png)
+
+CHoose your backend security group
+Select a single instance and use an on demand instance to prevent interruptions with spot instance deployments
+![Backend Beanstalk Setup](https://i.postimg.cc/wxSX9Xcx/Screenshot-2025-10-23-172315.png)
+Leave all other subsequent settings as default
+
+Use Basic monitoring.
+![Backend Beanstalk Setup](https://i.postimg.cc/wvMY6y80/Screenshot-2025-10-24-221441.png)
+
+Managed Updates were turned off. Rolling updates were disabled. Not required due to the type of application
+![Backend Beanstalk Setup](https://i.postimg.cc/GpH1RT1N/Screenshot-2025-10-24-221517.png)
+![Backend Beanstalk Setup](https://i.postimg.cc/vBF2K48V/Screenshot-2025-10-24-221534.png)
+
+Deployment Policy: All at once. Batch Size type: Percentage
+![Backend Beanstalk Setup](https://i.postimg.cc/vBF2K48V/Screenshot-2025-10-24-221534.png)
+
+Enable Health Checks. Health threshold(OK). Set timeout (e.g. 600 seconds) Use Nginx proxy.
+![Backend Beanstalk Setup](https://i.postimg.cc/4N2gSQDv/Screenshot-2025-10-24-221549.png)
+
+Ensure X-Ray Daemon, Log rotation and log streaming are all turned off to avoid extra charges
+![Backend Beanstalk Setup](https://i.postimg.cc/x1gtR6Bc/Screenshot-2025-10-24-221604.png)
+
+Wait for it to complete deployment
+![Backend Beanstalk Setup](https://i.postimg.cc/kXvBLKTw/Screenshot-2025-10-23-172644.png)
+
+You will get an internal Domain (e.g., `internal-backend-xxxx.amazonaws.com`). Note it down. this is the backend URL used by the frontend.
 
 ---
+
+
 
 ## Deploy the Frontend (public EB environment)
 
-1. Create Application → Upload `frontend.zip`.
-2. Configure (more options) → Network:
+1. Environment properties in the frontend code (frontend application.py), set the BACKEND_URL value = `http://<the backend Url you copied>/data`
+2. Zip the Frontend files
+3. Select Create Application → Upload `frontend.zip`.
+4. Configure (more options) → Network:
+    Select your VPC
+    Instance subnet: priv-subnet-1. instances have public IP
+5. Security groups: assign your public SG e.g.`sg-frontend` for instances. Security groups: assign  `sg-frontend-ec2` (instances)
+6. IAM roles: same as above
+7. Create environment → Wait for Green success
+Leave all other settings same as backend
 
-    VPC: `week2-secure-vpc`
-    Load balancer subnets: **pub-subnet-1**, **pub-subnet-2** (ALB must be public)
-    Instance subnets: **priv-subnet-1**, **priv-subnet-2** (instances have no public IP)
-    Load balancer = Application Load Balancer, **Scheme = internet-facing**
-3. Security groups: assign `sg-frontend-alb` (ALB) and `sg-frontend-ec2` (instances)
-4. Environment properties (env vars): set `BACKEND_URL = http://<internal-backend-alb-dns>/data`
-5. IAM roles: same as above
-6. Create environment → Wait for **Green**
+   ### STEP 1
+   Select Web Server Environment. Give it a Name.
+![Frontend Beanstalk Setup](https://i.postimg.cc/0yyM1nXB/Screenshot-2025-10-24-220525.png)
 
-Open the frontend Environment URL (public) — you should see the styled UI and backend data.
+Platform: Select Python. 
+PLatform Branch: Python 3.9 or equivalent
+![Frontend Beanstalk Setup](https://i.postimg.cc/Hs2fqkX4/Screenshot-2025-10-23-153322.png)
+
+Application Code: Select Upload your code. Upload your zipped file. 
+Version Label. Provide a version identifier.
+Single Instance: Free tier Deployment to avoid unintended cost , or interruptions in the case of spot.
+![Frontend Beanstalk Setup](https://i.postimg.cc/VsGfxwMj/Screenshot-2025-10-24-230856.png)
+
+### STEP 2
+Next, Configure Service Access by Selecting the Service Role and the EC instance Profile created earlier
+Provide a Key Pair.
+![Frontend Beanstalk Setup](https://i.postimg.cc/brL3BdWN/Screenshot-2025-10-23-155653.png)
+
+
+### STEP 3
+Select the VPC you Created and the Public Subnet.
+Assign public IP :check it because we are deploying our frontend in Public subnets and would like to access it via the internet
+![Frontend Beanstalk Setup](https://i.postimg.cc/pXxkzNyj/Screenshot-2025-10-24-220921.png)
+
+
+### STEP 4 
+Choose the Instance Type: General Purpose
+Monitoring Interval: Leave as default
+![Frontend Beanstalk Setup](https://i.postimg.cc/28M4844J/Screenshot-2025-10-23-172252.png)
+
+CHoose your Frontend security group
+Select a single instance and use an on demand instance to prevent interruptions with spot instance deployments
+![Frontend Beanstalk Setup](https://i.postimg.cc/T1Z6NRSf/Screenshot-2025-10-24-221232.png)
+
+Use Basic monitoring.
+![Frontend Beanstalk Setup](https://i.postimg.cc/wvMY6y80/Screenshot-2025-10-24-221441.png)
+
+Managed Updates were turned off. Rolling updates were disabled. Not required due to the type of application
+![Frontend Beanstalk Setup](https://i.postimg.cc/GpH1RT1N/Screenshot-2025-10-24-221517.png)
+![Frontend Beanstalk Setup](https://i.postimg.cc/vBF2K48V/Screenshot-2025-10-24-221534.png)
+
+Deployment Policy: All at once. Batch Size type: Percentage
+![Frontend Beanstalk Setup](https://i.postimg.cc/vBF2K48V/Screenshot-2025-10-24-221534.png)
+
+Enable Health Checks. Health threshold(OK). Set timeout (e.g. 600 seconds) Use Nginx proxy.
+![Frontend Beanstalk Setup](https://i.postimg.cc/4N2gSQDv/Screenshot-2025-10-24-221549.png)
+
+Ensure X-Ray Daemon, Log rotation and log streaming are all turned off to avoid extra charges
+![Frontend Beanstalk Setup](https://i.postimg.cc/x1gtR6Bc/Screenshot-2025-10-24-221604.png)
+
+Leave any other settings as default
+
+Wait for it to complete deployment
+![Frontend Beanstalk Setup](https://i.postimg.cc/13WbtRmj/Screenshot-2025-10-24-231331.png)
+
+Copy the frontend URL (public). This, when accessed, should show the styled UI and backend data.
 
 ---
 
-## Testing & verification (do these checks)
+## Testing & verification
+
+Event checks: All deployment events completed successfully.
+![Testing & verification](https://i.postimg.cc/V6YwTfFF/Screenshot-2025-10-24-231945.png)
 
 Frontend works: Open the public URL and confirm the UI displays backend data.
-Backend unreachable publicly: From your local machine, try to access backend internal ALB URL — it should not work (expected).
-Security groups: Confirm `sg-backend-ec2` inbound only allows `sg-backend-alb`; `sg-backend-alb` inbound only allows `sg-frontend-ec2`.
-No public IPs on instances: EC2 Console → Instances → check `IPv4 Public IP` is blank for both frontend and backend instances.
-Health checks: ALB targets should be healthy; EB Health should be Green.
+![Testing & verification](https://i.postimg.cc/mZX980gX/Screenshot-2025-10-24-231347.png)
 
 ---
 
-## Common errors & how to fix them
+## Common errors i came across and how i fixed them
 
-Deployment failed — `eb-engine.log` shows ModuleNotFoundError: Ensure `requirements.txt` lists all dependencies and is at top level.
-`application.py` not found / EB cannot start app: Make sure you zipped app contents, not the folder itself, and the file is named `application.py` with WSGI callable `application = Flask(__name__)`.
-Health checks failing: Make sure app listens on the correct port (EB binds application to port EB expects), and health check path `/` returns 200 quickly.
-Frontend cannot talk to backend: Check SG rules and that `BACKEND_URL` points to the correct internal ALB DNS.
+1. Deployment failed: ELastic beanstalk log shows ModuleNotFoundError:
+   Ensure `requirements.txt` lists all dependencies and is at top level.
+
+2. `application.py` not found / EB cannot start app:
+   Make sure you zipped app contents, not the folder itself, and the file is named `application.py` with WSGI callable `application = Flask(__name__)`.
+
+3. Health checks failing:
+   Make sure app listens on the correct port (EB binds application to port EB expects), and health check path `/` returns 200 quickly.
+
+4. Frontend cannot talk to backend:
+   Check SG rules and that the `BACKEND_URL` points to the correct internal ALB DNS.
 
 ---
 
-## Cost & performance notes (quick)
+## Cost & performance notes
 
-NAT Gateway and Elastic IP are charged hourly — remember to release them during testing if not needed.
+NAT Gateway and Elastic IP are charged hourly, so remember to release them during testing if not needed.
 t2/t3.micro instances are cost-effective for testing; for production choose t3.small+ and enable auto-scaling.
 Elastic Beanstalk simplifies operations but hides finer controls; for full control consider ECS/EKS or EC2 Autoscaling groups later.
 
 ---
 
 
-## Lessons learned (personal notes)
+## Lessons learned (personal notes of mine that might help others as well)
 
-Elastic Beanstalk is fantastic for quick, managed deployments, but it requires mindful networking/configuration to be secure.
-Always test DNS and reachability from inside the VPC to ensure internal ALBs are resolvable and usable.
+Elastic Beanstalk is fantastic for quick, managed deployments, but it requires mindful networking/configuration.
+Always test DNS and reachability locally and from inside the VPC.
 Security groups referencing other SGs are a simple and powerful way to enforce least privilege networking.
 Zip structure and naming are tiny things that often break deployments, so fix them early.
 
 ---
-
-## Next steps & improvements
-
-Add HTTPS to the frontend ALB (use AWS Certificate Manager).
-Add CloudWatch alarms and autoscaling policies.
-Use RDS (in private subnets) for persistent data and Secrets Manager for credentials.
-Automate the whole stack with CloudFormation / Terraform for repeatability.
-Add a Bastion host or use Systems Manager (SSM) Session Manager for secure troubleshooting.
-
----
-
-## Final thoughts 
-
-Building this secure, two-tier app felt like preparing jollof rice perfectly, a bit of setup, the right ingredients, and patience on low heat until everything comes together. Big thanks to everyone encouraging the weekly challenge. If you’re thinking of starting a hands-on cloud challenge, do it. it changes how you think about architecture, cost, and security.
