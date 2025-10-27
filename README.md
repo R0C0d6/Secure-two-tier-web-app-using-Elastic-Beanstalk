@@ -212,10 +212,13 @@ Create a VPC with 2 public and 2 private subnets in two AZs, attach an IGW, crea
 4. Create Private Subnet 1: `10.0.11.0/24`.
    ![Private Subnet Created](https://i.postimg.cc/FzXg1Txz/Screenshot-2025-10-23-161911.png)
 5. Create Internet Gateway (IGW) and attach to VPC.
-   ![IGW Created](https://i.postimg.cc/KzvZPbvw/Screenshot-2025-10-23-155554.png)
-7. Create a Public Route Table, add route `0.0.0.0/0` -> IGW, associate with public subnets.
-8. Allocate an Elastic IP and create a NAT Gateway in a public subnet (for private instances to download packages).
-9. Create a Private Route Table, add route `0.0.0.0/0` -> NAT Gateway, associate with private subnets.
+   ![IGW Created](https://i.postimg.cc/2yxcYpfx/Screenshot-2025-10-23-162649.png)
+   ![IGW Attached](https://i.postimg.cc/x1PzP03b/Screenshot-2025-10-23-162732.png)
+7. Create a Role and instance profile.
+   ![Role Created](https://i.postimg.cc/KzvZPbvw/Screenshot-2025-10-23-155554.png)
+8. Create a Public Route Table, add route `0.0.0.0/0` -> IGW, associate with public subnets.
+9. Allocate an Elastic IP and create a NAT Gateway in a public subnet (for private instances to download packages).
+10. Create a Private Route Table, add route `0.0.0.0/0` -> NAT Gateway, associate with private subnets.
 
 Confirm: public subnets send internet to IGW; private subnets send internet to NAT.
 
