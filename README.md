@@ -14,7 +14,6 @@ A secure two-tier web application where the frontend is internet-facing (public 
 
 I wanted to go beyond “launch a single EC2 and call it a day.” In modern cloud apps you usually need:
 
- Resiliency (multiple AZs)
  Security (backend private, least privilege)
  Manageability ( BeanstalkUI, scaling)
  Repeatability (infrastructure as small, scriptable steps)
@@ -25,21 +24,8 @@ Elastic Beanstalk is great for quick prototyping, but you can, and should, confi
 
 ## Architecture Overview (simple diagram)
 
-```
-                     Internet
-                        ↓
-             Public ALB (Frontend) — public subnets (2 AZs)
-                        ↓
-            Frontend EC2 instances (private subnets, no public IP)
-                        ↓  (HTTP)
-              Internal ALB (Backend) — private subnets (2 AZs)
-                        ↓
-             Backend EC2 instances (private subnets, no public IP)
-                        ↓
-                      NAT Gateway
-                        ↓
-                   Internet (outbound only)
-```
+``
+ ![Architecture Diagram](https://i.postimg.cc/RVWJ6qYs/Elastic-Beanstalk-drawio-4.png)
 
 Key security points:
 
